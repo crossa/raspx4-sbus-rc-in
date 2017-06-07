@@ -8,8 +8,8 @@
 #include "sbus.h"
 
 //--------------------------------------------------------------------------------------------------//
-Sbus::Sbus(char *_device, bool _all_channel):
-max_channels_count(18),_key(2048){
+Sbus::Sbus(char *_device, bool _all_channel) :
+		max_channels_count(18), _key(2048) {
 	this->_device = _device;
 	this->_all_channel = _all_channel;
 	this->channels_data = new int16_t[this->max_channels_count];
@@ -22,7 +22,8 @@ Sbus::~Sbus() {
 //--------------------------------------------------------------------------------------------------//
 void Sbus::init() {
 	//初始化共享内存
-	if ((_shmid = shmget(_key, sizeof(uint16_t*) * max_channels_count, IPC_CREAT | 0666)) < 0) {
+	if ((_shmid = shmget(_key, sizeof(uint16_t*) * max_channels_count,
+	IPC_CREAT | 0666)) < 0) {
 		perror("无法创建内存共享区\n");
 		exit(0x01);
 	}
@@ -35,7 +36,7 @@ void Sbus::init() {
 		printf("无法映射共享内存区块\n");
 		exit(0x02);
 	}
-	this->channels_data= (int16_t*) p;
+	this->channels_data = (int16_t*) p;
 
 	//开启设备
 	_device_fd = open(_device, O_RDWR);
@@ -49,20 +50,41 @@ void Sbus::init() {
 	tcgetattr(_device_fd, &_device_opt);
 	tcflush(_device_fd, TCIOFLUSH);
 	/*设置为100000Bps*/
-	cfsetispeed(&_device_opt, 100000);
-	cfsetospeed(&_device_opt, 100000);
-	if (0 != tcsetattr(_device_fd, TCSANOW, &_device_opt)) {
+	//cfsetispeed(&_device_opt, 115200);
+	//cfsetospeed(&_device_opt, 115200);
+	int status;
+	if (0 != (status = tcsetattr(_device_fd, TCSANOW, &_device_opt))) {
 		close(_device_fd);
-		perror("无法打指定的开串口设备\n");
+		perror("无法设置的开串口设备\n");
 		exit(-1);
 	}
 
 	tcflush(_device_fd, TCIOFLUSH);
-	if (0 == _setDeviceParity(_device_fd, 8, 2, 'e')) {
+	_device_opt.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR
+	                         | IGNCR | ICRNL | IXON);
+	_device_opt.c_iflag |= (INPCK | IGNPAR);
+	_device_opt.c_oflag &= ~OPOST;
+	_device_opt.c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
+	_device_opt.c_cflag &= ~(CSIZE | CRTSCTS | PARODD  );
+	        // use BOTHER to specify speed directly in c_[io]speed member
+	_device_opt.c_cflag |= (CS8 | CSTOPB | CLOCAL | PARENB  | CREAD);
+	_device_opt.c_ispeed = 100000;
+	_device_opt.c_ospeed = 100000;
+	        // see select() comment below
+	_device_opt.c_cc[VMIN] = 25;
+	_device_opt.c_cc[VTIME] = 0;
+	tcflush(_device_fd, TCIOFLUSH);
+	if (0!=tcsetattr(_device_fd, TCSANOW, &_device_opt)) {
+		perror("SetupSerial 3");
+		exit(0x00);
+	}
+
+	/**
+	if (0 == _setDeviceParity(_device_fd, 8, 2, 'N')) {
 		close(_device_fd);
 		perror("设置校验、数据、停止位时发生了错误\n");
 		exit(-1);
-	}
+	}*/
 }
 //--------------------------------------------------------------------------------------------------//
 /**
@@ -131,12 +153,14 @@ int Sbus::_setDeviceParity(int fd, int databits, int stopbits, int parity) {
 	}
 	//关闭硬件掌控的流控制
 	options.c_cflag &= ~CRTSCTS;
-
+	options.c_iflag &= ~CRTSCTS;
+	//options.c_lflag  &= ~(ICANON | ECHO | ECHOE | ISIG);  /*Input*/
+	//options.c_oflag  &= ~OPOST;   /*Output*/
 	/* Set input parity option */
 	if (parity != 'n')
 		options.c_iflag |= INPCK;
 	tcflush(fd, TCIFLUSH);
-	options.c_cc[VTIME] = 150; /* 设置超时15 seconds*/
+	options.c_cc[VTIME] = 25; /* 设置超时15 seconds*/
 	options.c_cc[VMIN] = 0; /* Update the options and do it NOW */
 	if (tcsetattr(fd, TCSANOW, &options) != 0) {
 		perror("SetupSerial 3");
@@ -325,6 +349,12 @@ void Sbus::UpdateChannels(void) {
 		channels[14] = ((sbusData[20] >> 2 | sbusData[21] << 6) & 0x07FF);
 		channels[15] = ((sbusData[21] >> 5 | sbusData[22] << 3) & 0x07FF);
 	}
+
+	//system("clear");
+	int i;
+	for (i = 0; i < 8; ++i) {
+		printf("Channel %d: %d", i + 1, channels[i]);
+	}
 	// DigiChannel 1
 	/*if (sbusData[23] & (1<<0)) {
 	 channels[16] = 1;
@@ -348,32 +378,25 @@ void Sbus::UpdateChannels(void) {
 		failsafe_status = SBUS_SIGNAL_FAILSAFE;
 	}
 	//if(SBUS_SIGNAL_OK==failsafe_status){
-	memcpy(channels_data,channels,sizeof(channels));
+	memcpy(channels_data, channels, sizeof(channels));
 	//}
 
 }
 void Sbus::FeedLine(void) {
-
-	uint8_t buffer[25]; //起始25字节
-	int count;
 	while (1) {
+		uint8_t buffer[25];
 		if (read(_device_fd, &buffer, 1) > 0) {
-			//读到了起始帧;
-			if (0x00 != buffer[0])
-				continue;
-			for (count = 1; count <= 24; ++count) {
-				if (read(_device_fd, &buffer + count, 1) > 0) {
-					if (0xff == buffer[count])
-						break;
-				}
-			}
-			if (24 > count)
-				continue;
-			if (0x00 == buffer[0] && 0xff == buffer[24]) {
+			//读到了起始帧;兼容stm32，nuttx
+			if (0xf0 == buffer[0]) {
+				//for(int i=1;i<=24;++i){
+				//	int tmp1 = read(_device_fd,&buffer[i],24);
+				//
+				read(_device_fd, &buffer+1, sizeof(buffer)-1);
 				memcpy(sbusData, buffer, sizeof(buffer));
-				this->UpdateChannels();
+									this->UpdateChannels();
 			}
 		}
+		usleep(20000);
 	}
 	/*
 	 if (port.available() > 24) {

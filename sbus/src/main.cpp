@@ -19,8 +19,7 @@ int main(int argc, char**argv) {
 	}
 
 	if (NULL == (all = getArg(argc, argv, "-a"))) {
-		help();
-		exit(0x00);
+		all="n";
 	}
 	bool all_channel = (strcmp("y", all) == 0) ? true : false;
 	//channel_count = atoi(channels);

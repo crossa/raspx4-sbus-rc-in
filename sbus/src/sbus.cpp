@@ -50,41 +50,21 @@ void Sbus::init() {
 	tcgetattr(_device_fd, &_device_opt);
 	tcflush(_device_fd, TCIOFLUSH);
 	/*设置为100000Bps*/
-	//cfsetispeed(&_device_opt, 115200);
-	//cfsetospeed(&_device_opt, 115200);
+	_device_opt.c_iflag &= ~CBAUD;
+	cfsetispeed(&_device_opt, 100000);
+	cfsetospeed(&_device_opt, 100000);
 	int status;
 	if (0 != (status = tcsetattr(_device_fd, TCSANOW, &_device_opt))) {
 		close(_device_fd);
-		perror("无法设置的开串口设备\n");
+		perror("无法设置的开串口设备通信速率，推出\n");
 		exit(-1);
 	}
 
-	tcflush(_device_fd, TCIOFLUSH);
-	_device_opt.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR
-	                         | IGNCR | ICRNL | IXON);
-	_device_opt.c_iflag |= (INPCK | IGNPAR);
-	_device_opt.c_oflag &= ~OPOST;
-	_device_opt.c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
-	_device_opt.c_cflag &= ~(CSIZE | CRTSCTS | PARODD  );
-	        // use BOTHER to specify speed directly in c_[io]speed member
-	_device_opt.c_cflag |= (CS8 | CSTOPB | CLOCAL | PARENB  | CREAD);
-	_device_opt.c_ispeed = 100000;
-	_device_opt.c_ospeed = 100000;
-	        // see select() comment below
-	_device_opt.c_cc[VMIN] = 25;
-	_device_opt.c_cc[VTIME] = 0;
-	tcflush(_device_fd, TCIOFLUSH);
-	if (0!=tcsetattr(_device_fd, TCSANOW, &_device_opt)) {
-		perror("SetupSerial 3");
-		exit(0x00);
-	}
-
-	/**
 	if (0 == _setDeviceParity(_device_fd, 8, 2, 'N')) {
 		close(_device_fd);
 		perror("设置校验、数据、停止位时发生了错误\n");
 		exit(-1);
-	}*/
+	}
 }
 //--------------------------------------------------------------------------------------------------//
 /**
@@ -156,6 +136,7 @@ int Sbus::_setDeviceParity(int fd, int databits, int stopbits, int parity) {
 	options.c_iflag &= ~CRTSCTS;
 	//options.c_lflag  &= ~(ICANON | ECHO | ECHOE | ISIG);  /*Input*/
 	//options.c_oflag  &= ~OPOST;   /*Output*/
+
 	/* Set input parity option */
 	if (parity != 'n')
 		options.c_iflag |= INPCK;
@@ -172,7 +153,6 @@ int Sbus::_setDeviceParity(int fd, int databits, int stopbits, int parity) {
 
 //--------------------------------------------------------------------------------------------------//
 void Sbus::begin() {
-	this->init();
 	uint8_t loc_sbusData[25] = { 0x0f, 0x01, 0x04, 0x20, 0x00, 0xff, 0x07, 0x40,
 			0x00, 0x02, 0x10, 0x80, 0x2c, 0x64, 0x21, 0x0b, 0x59, 0x08, 0x40,
 			0x00, 0x02, 0x10, 0x80, 0x00, 0x00 };
@@ -180,6 +160,7 @@ void Sbus::begin() {
 			1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023, 0, 0 };
 	int16_t loc_servos[18] = { 1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023,
 			1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023, 0, 0 };
+	this->init();
 	memcpy(sbusData, loc_sbusData, 25);
 	memcpy(channels, loc_channels, 18);
 	memcpy(servos, loc_servos, 18);

@@ -9,6 +9,7 @@
 
 #include "stdio.h"
 #include "stdlib.h"
+#include  <stdint.h>
 #include  <string.h>
 #include  <unistd.h>     /*Unix 标准函数定义*/
 #include  <sys/types.h>

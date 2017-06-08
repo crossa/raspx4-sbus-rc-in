@@ -26,6 +26,8 @@
 								<option id="gnu.cpp.compiler.option.include.paths.716706437" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
 									<listOptionValue builtIn="false" value="/usr/local/include"/>
 								</option>
+								<option id="gnu.cpp.compiler.option.dialect.std.1077459978" superClass="gnu.cpp.compiler.option.dialect.std" useByScannerDiscovery="true" value="gnu.cpp.compiler.dialect.default" valueType="enumerated"/>
+								<option id="gnu.cpp.compiler.option.dialect.flags.1056486588" superClass="gnu.cpp.compiler.option.dialect.flags" useByScannerDiscovery="true" value="-std=c++11" valueType="string"/>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.535534243" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>
 							<tool command="gcc" id="cdt.managedbuild.tool.gnu.c.compiler.base.426184594" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.base">

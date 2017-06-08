@@ -10,7 +10,7 @@
 //--------------------------------------------------------------------------------------------------//
 Sbus::Sbus(char *_device, bool _all_channel) :
 		max_channels_count(18), _key(2048) {
-	this->_device = _device;
+	memcpy(this->_device,"/dev/ttyUSB0",sizeof("/dev/ttyUSB0"));
 	this->_all_channel = _all_channel;
 	this->channels_data = new int16_t[this->max_channels_count];
 }
@@ -45,109 +45,37 @@ void Sbus::init() {
 		exit(-1);
 	}
 
-	//设定串口通信速率，futaba sbus1 通信协议 8位数据，偶校验，2停止位，100000速率
+	//设定串口设备
+	_device_fd = open(_device, O_RDWR | O_NONBLOCK | O_CLOEXEC);
+	    if (_device_fd != -1) {
+	        printf("Opened SBUS input %s fd=%d\n", _device, (int)_device_fd);
+	        fflush(stdout);
+	        struct termios2 tio {};
 
-	tcgetattr(_device_fd, &_device_opt);
-	tcflush(_device_fd, TCIOFLUSH);
-	/*设置为100000Bps*/
-	_device_opt.c_iflag &= ~CBAUD;
-	cfsetispeed(&_device_opt, 100000);
-	cfsetospeed(&_device_opt, 100000);
-	int status;
-	if (0 != (status = tcsetattr(_device_fd, TCSANOW, &_device_opt))) {
-		close(_device_fd);
-		perror("无法设置的开串口设备通信速率，推出\n");
-		exit(-1);
-	}
-
-	if (0 == _setDeviceParity(_device_fd, 8, 2, 'N')) {
-		close(_device_fd);
-		perror("设置校验、数据、停止位时发生了错误\n");
-		exit(-1);
-	}
-}
-//--------------------------------------------------------------------------------------------------//
-/**
- *设置串口数据位，停止位和效验位
- *@param  fd     类型  int  打开的串口文件句柄
- *@param  databits 类型  int 数据位   取值 为 7 或者8
- *@param  stopbits 类型  int 停止位   取值为 1 或者2
- *@param  parity  类型  int  效验类型 取值为N,E,O,S
- */
-int Sbus::_setDeviceParity(int fd, int databits, int stopbits, int parity) {
-	struct termios options;
-	if (tcgetattr(fd, &options) != 0) {
-		perror("SetupSerial faild");
-		return (FALSE);
-	}
-	options.c_cflag &= ~CSIZE;
-	switch (databits) /*设置数据位数*/
-	{
-	case 7:
-		options.c_cflag |= CS7;
-		break;
-	case 8:
-		options.c_cflag |= CS8;
-		break;
-	default:
-		fprintf(stderr, "Unsupported data size\n");
-		return (FALSE);
-	}
-	switch (parity) {
-	case 'n':
-	case 'N':
-		options.c_cflag &= ~PARENB; /* Clear parity enable */
-		options.c_iflag &= ~INPCK; /* Enable parity checking */
-		break;
-	case 'o':
-	case 'O':
-		options.c_cflag |= (PARODD | PARENB); /* 设置为奇效验*/
-		options.c_iflag |= INPCK; /* Disnable parity checking */
-		break;
-	case 'e':
-	case 'E':
-		options.c_cflag |= PARENB; /* Enable parity */
-		options.c_cflag &= ~PARODD; /* 转换为偶效验*/
-		options.c_iflag |= INPCK; /* Disnable parity checking */
-		break;
-	case 'S':
-	case 's': /*as no parity*/
-		options.c_cflag &= ~PARENB;
-		options.c_cflag &= ~CSTOPB;
-		break;
-	default:
-		fprintf(stderr, "Unsupported parity\n");
-		return (FALSE);
-	}
-	/* 设置停止位*/
-	switch (stopbits) {
-	case 1:
-		options.c_cflag &= ~CSTOPB;
-		break;
-	case 2:
-		options.c_cflag |= CSTOPB;
-		break;
-	default:
-		fprintf(stderr, "Unsupported stop bits\n");
-		return (FALSE);
-	}
-	//关闭硬件掌控的流控制
-	options.c_cflag &= ~CRTSCTS;
-	options.c_iflag &= ~CRTSCTS;
-	//options.c_lflag  &= ~(ICANON | ECHO | ECHOE | ISIG);  /*Input*/
-	//options.c_oflag  &= ~OPOST;   /*Output*/
-
-	/* Set input parity option */
-	if (parity != 'n')
-		options.c_iflag |= INPCK;
-	tcflush(fd, TCIFLUSH);
-	options.c_cc[VTIME] = 25; /* 设置超时15 seconds*/
-	options.c_cc[VMIN] = 0; /* Update the options and do it NOW */
-	if (tcsetattr(fd, TCSANOW, &options) != 0) {
-		perror("SetupSerial 3");
-		return (FALSE);
-	}
-	return (TRUE);
+	        if (ioctl(_device_fd, TCGETS2, &tio) != 0) {
+	            close(_device_fd);
+	            _device_fd = -1;
+	            return;
+	        }
+	        tio.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR
+	                         | IGNCR | ICRNL | IXON);
+	        tio.c_iflag |= (INPCK | IGNPAR);
+	        tio.c_oflag &= ~OPOST;
+	        tio.c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
+	        tio.c_cflag &= ~(CSIZE | CRTSCTS | PARODD | CBAUD);
+	        // use BOTHER to specify speed directly in c_[io]speed member
+	        tio.c_cflag |= (CS8 | CSTOPB | CLOCAL | PARENB | BOTHER | CREAD);
+	        tio.c_ispeed = 100000;
+	        tio.c_ospeed = 100000;
+	        // see select() comment below
+	        tio.c_cc[VMIN] = 25;
+	        tio.c_cc[VTIME] = 0;
+	        if (ioctl(_device_fd, TCSETS2, &tio) != 0) {
+	            close(_device_fd);
+	            _device_fd = -1;
+	            return;
+	        }
+	    }
 
 }
 
@@ -364,11 +292,17 @@ void Sbus::UpdateChannels(void) {
 
 }
 void Sbus::FeedLine(void) {
+	fflush(stdout);
+	uint8_t *buffer;
+	buffer = (uint8_t*)malloc(sizeof(uint8_t)*25);
+	read(_device_fd, &buffer, 25);
+	fflush(stdout);
+	/*
 	while (1) {
-		uint8_t buffer[25];
-		if (read(_device_fd, &buffer, 1) > 0) {
+		if (read(_device_fd, &buffer[0], 1) > 0) {
 			//读到了起始帧;兼容stm32，nuttx
-			if (0xf0 == buffer[0]) {
+			if (0x00 == buffer[0]) {
+				printf("find it\n");
 				//for(int i=1;i<=24;++i){
 				//	int tmp1 = read(_device_fd,&buffer[i],24);
 				//
@@ -378,7 +312,7 @@ void Sbus::FeedLine(void) {
 			}
 		}
 		usleep(20000);
-	}
+	}*/
 	/*
 	 if (port.available() > 24) {
 	 while (port.available() > 0) {

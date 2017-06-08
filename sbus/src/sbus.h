@@ -7,19 +7,21 @@
 #define TRUE 1
 #define FALSE 0
 
-#include "stdio.h"
-#include "stdlib.h"
+#include <stdio.h>
+#include <stdlib.h>
 #include  <stdint.h>
 #include  <string.h>
 #include  <unistd.h>     /*Unix 标准函数定义*/
+#include  <fcntl.h>      /*文件控制定义*/
+#include <sys/ioctl.h>
+#include <asm-generic/termbits.h>
+#include  <errno.h>      /*错误号定义*/
 #include  <sys/types.h>
 #include  <sys/stat.h>
 #include  <sys/types.h>
 #include  <sys/ipc.h>
 #include  <sys/shm.h>
-#include  <fcntl.h>      /*文件控制定义*/
-#include  <termios.h>    /*PPSIX 终端控制定义*/
-#include  <errno.h>      /*错误号定义*/
+
 //#define ALL_CHANNELS
 
 class Sbus {
@@ -48,9 +50,9 @@ public:
 	void FeedLine(void);
 private:
 	bool _all_channel; //是否完整开启16通道
-	char * _device; //设备标识
+	char _device[30]; //设备标识
 	int _device_fd; //设备具柄
-	struct termios _device_opt; //通信属性
+	struct termios2 _device_opt; //通信属性
 	int _setDeviceParity(int fd, int databits, int stopbits, int parity); //设定通信参数
 	uint8_t _channels;
 	uint8_t byte_in_sbus;

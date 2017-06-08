@@ -13,10 +13,11 @@ int main(int argc, char**argv) {
 
 	//int channel_count;
 	char *all;
+	/*
 	if (NULL == (device = getArg(argc, argv, "-d"))) {
 		help();
 		exit(0x00);
-	}
+	}*/
 
 	if (NULL == (all = getArg(argc, argv, "-a"))) {
 		all="n";

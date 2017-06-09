@@ -9,12 +9,12 @@
 
 //--------------------------------------------------------------------------------------------------//
 Sbus::Sbus(char *_device, bool _all_channel){
-	strcpy(this->_device,_device);
+	this->_device=_device;
 	this->_all_channel = _all_channel;
 	this->max_channels_count=(_all_channel)?18:8;
 	failsafe_status = SBUS_SIGNAL_OK;
 	_device_fd=-1;
-	_key=2048;
+	_key=4096;
 	_shmid=-1;
 	channels_data=nullptr;
 }
@@ -26,7 +26,7 @@ Sbus::~Sbus() {
 //--------------------------------------------------------------------------------------------------//
 void Sbus::init() {
 	//初始化共享内存
-	if ((_shmid = shmget(_key, sizeof(uint16_t*) * max_channels_count,
+	if ((_shmid = shmget(_key, sizeof(int*) * max_channels_count,
 	IPC_CREAT | 0666)) < 0) {
 		perror("无法创建内存共享区\n");
 		exit(0x01);
@@ -92,23 +92,30 @@ void Sbus::begin() {
 			1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023, 0, 0 };
 	int16_t loc_servos[18] = { 1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023,
 			1023, 1023, 1023, 1023, 1023, 1023, 1023, 1023, 0, 0 };
-	this->init();
 	memcpy(_sbusData, loc_sbusData, 25);
 	//memcpy(_channels, loc_channels, 18);
 	//memcpy(_servos, loc_servos, 18);
 	fflush(stdout);
 	int nread;
 	//开始解析SBUS数据
+	fd_set fds;
+	struct timeval tv;
+	FD_ZERO(&fds);
+	FD_SET(_device_fd, &fds);
+	select(_device_fd+1, &fds, nullptr, nullptr, &tv);
 	while(1){
 		fflush(stdout);
+
+		/*
+		if(1!=select(_device_fd+1, &fds, nullptr, nullptr, &tv))
+			continue;*/
 		nread = read(_device_fd, &_sbusData, sizeof(_sbusData));
 		if(nread==25){
 		    if(0x0f==_sbusData[0] && 0x00==_sbusData[24]){
 			   this->UpdateChannels();
-			   fflush(stdout);
 			}
 		}
-		(this->_all_channel)?usleep(6700):usleep(4700);
+		usleep(4700);
 	}
 }
 //--------------------------------------------------------------------------//
@@ -151,13 +158,15 @@ void Sbus::UpdateChannels(void) {
 		_channels[15] = ((_sbusData[21] >> 5 | _sbusData[22] << 3) & 0x07FF);
 	}
 
-	//system("clear");
+	fflush(stdout);
 	int i;
+#ifdef __SBUS_DEBUG
 	for (i = 0; i < 8; ++i) {
 		printf("Channel %d: %d    ", i + 1, _channels[i]);
 		if(i==7)
 			printf("\n");
 	}
+#endif
 	// DigiChannel 1
 	/*if (sbusData[23] & (1<<0)) {
 	 channels[16] = 1;
@@ -180,8 +189,13 @@ void Sbus::UpdateChannels(void) {
 	if (_sbusData[23] & (1 << 3)) {
 		failsafe_status = SBUS_SIGNAL_FAILSAFE;
 	}
+
+	for(int start=0;start<sizeof(this->max_channels_count);++start){
+		*(this->channels_data+start) = (int) _channels[start];
+	}
+
 	//if(SBUS_SIGNAL_OK==failsafe_status){
-	memcpy(channels_data, _channels, sizeof(_channels));
+	//memcpy(channels_data, _channels, sizeof(int16_t)*this->max_channels_count);
 	//}
 }
 //---------------------------------------------------------------------------------------//

@@ -27,7 +27,7 @@
 class Sbus {
 public:
 
-	int16_t *channels_data;
+	int *channels_data;
 	int max_channels_count;
 	uint8_t failsafe_status;
 	Sbus(char*,bool);
@@ -50,7 +50,7 @@ private:
 	int16_t _channels[18]; // 18个通道的数据
 	int16_t _servos[18];   //18个舵机的数据
 	bool _all_channel; //是否完整开启16通道
-	char _device[50]; //设备标识
+	const char *_device; //设备标识
 	int _device_fd; //设备具柄
 	//uint8_t _channels;
 	int _shmid;

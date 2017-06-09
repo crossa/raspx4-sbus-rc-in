@@ -10,7 +10,7 @@
 //--------------------------------------------------------------------------------------------------//
 Sbus::Sbus(char *_device, bool _all_channel) :
 		max_channels_count(18), _key(2048) {
-	memcpy(this->_device,"/dev/ttyUSB0",sizeof("/dev/ttyUSB0"));
+	memcpy(this->_device, "/dev/ttyUSB0", sizeof("/dev/ttyUSB0"));
 	this->_all_channel = _all_channel;
 	this->channels_data = new int16_t[this->max_channels_count];
 }
@@ -47,35 +47,35 @@ void Sbus::init() {
 
 	//设定串口设备
 	_device_fd = open(_device, O_RDWR | O_NONBLOCK | O_CLOEXEC);
-	    if (_device_fd != -1) {
-	        printf("Opened SBUS input %s fd=%d\n", _device, (int)_device_fd);
-	        fflush(stdout);
-	        struct termios2 tio {};
+	if (_device_fd != -1) {
+		printf("Opened SBUS input %s fd=%d\n", _device, (int) _device_fd);
+		fflush(stdout);
+		struct termios2 tio { };
 
-	        if (ioctl(_device_fd, TCGETS2, &tio) != 0) {
-	            close(_device_fd);
-	            _device_fd = -1;
-	            return;
-	        }
-	        tio.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR
-	                         | IGNCR | ICRNL | IXON);
-	        tio.c_iflag |= (INPCK | IGNPAR);
-	        tio.c_oflag &= ~OPOST;
-	        tio.c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
-	        tio.c_cflag &= ~(CSIZE | CRTSCTS | PARODD | CBAUD);
-	        // use BOTHER to specify speed directly in c_[io]speed member
-	        tio.c_cflag |= (CS8 | CSTOPB | CLOCAL | PARENB | BOTHER | CREAD);
-	        tio.c_ispeed = 100000;
-	        tio.c_ospeed = 100000;
-	        // see select() comment below
-	        tio.c_cc[VMIN] = 25;
-	        tio.c_cc[VTIME] = 0;
-	        if (ioctl(_device_fd, TCSETS2, &tio) != 0) {
-	            close(_device_fd);
-	            _device_fd = -1;
-	            return;
-	        }
-	    }
+		if (ioctl(_device_fd, TCGETS2, &tio) != 0) {
+			close(_device_fd);
+			_device_fd = -1;
+			return;
+		}
+		tio.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR
+				| ICRNL | IXON);
+		tio.c_iflag |= (INPCK | IGNPAR);
+		tio.c_oflag &= ~OPOST;
+		tio.c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
+		tio.c_cflag &= ~(CSIZE | CRTSCTS | PARODD | CBAUD);
+		// use BOTHER to specify speed directly in c_[io]speed member
+		tio.c_cflag |= (CS8 | CSTOPB | CLOCAL | PARENB | BOTHER | CREAD);
+		tio.c_ispeed = 100000;
+		tio.c_ospeed = 100000;
+		// see select() comment below
+		tio.c_cc[VMIN] = 25;
+		tio.c_cc[VTIME] = 0;
+		if (ioctl(_device_fd, TCSETS2, &tio) != 0) {
+			close(_device_fd);
+			_device_fd = -1;
+			return;
+		}
+	}
 
 }
 
@@ -262,7 +262,9 @@ void Sbus::UpdateChannels(void) {
 	//system("clear");
 	int i;
 	for (i = 0; i < 8; ++i) {
-		printf("Channel %d: %d", i + 1, channels[i]);
+		printf("Channel %d: %d    ", i + 1, channels[i]);
+		if(i==7)
+			printf("\n");
 	}
 	// DigiChannel 1
 	/*if (sbusData[23] & (1<<0)) {
@@ -293,25 +295,43 @@ void Sbus::UpdateChannels(void) {
 }
 void Sbus::FeedLine(void) {
 	fflush(stdout);
-	uint8_t *buffer;
-	buffer = (uint8_t*)malloc(sizeof(uint8_t)*25);
-	read(_device_fd, &buffer, 25);
-	fflush(stdout);
-	/*
-	while (1) {
-		if (read(_device_fd, &buffer[0], 1) > 0) {
-			//读到了起始帧;兼容stm32，nuttx
-			if (0x00 == buffer[0]) {
-				printf("find it\n");
-				//for(int i=1;i<=24;++i){
-				//	int tmp1 = read(_device_fd,&buffer[i],24);
-				//
-				read(_device_fd, &buffer+1, sizeof(buffer)-1);
-				memcpy(sbusData, buffer, sizeof(buffer));
-									this->UpdateChannels();
+	uint8_t inBuffer[25];
+	int nread;
+	while(1){
+		fflush(stdout);
+		nread = read(_device_fd, &inBuffer, sizeof(inBuffer));
+		if(nread==25){
+		    if(0x0f==inBuffer[0] && 0x00==inBuffer[24]){
+			   //printf("FindIt\n");
+			   memcpy(sbusData, inBuffer, 25);
+			   this->UpdateChannels();
+			   fflush(stdout);
 			}
 		}
-		usleep(20000);
+		usleep(4700);
+	}
+	/*
+	uint8_t buffer[25];
+	fd_set fds;
+	struct timeval tv;
+	FD_ZERO(&fds);
+	FD_SET(_device_fd, &fds);
+	tv.tv_sec = 0;
+	tv.tv_usec = 0;
+	if (select(_device_fd + 1, &fds, nullptr, nullptr, &tv) != 1) {
+		//return;
+	}*/
+	/*
+	while (1) {
+	    int nread;
+	    uint8_t bytes[25];
+	    do {
+	    	fflush(stdout);
+	        nread = read(_device_fd, &bytes, sizeof(bytes));
+	        if(0x0f==bytes[0]){
+	        	printf("FindIt\n");
+	        }
+	    } while (nread == sizeof(bytes));
 	}*/
 	/*
 	 if (port.available() > 24) {

@@ -13,17 +13,16 @@ int main(int argc, char**argv) {
 
 	//int channel_count;
 	char *all;
-	/*
+
 	if (NULL == (device = getArg(argc, argv, "-d"))) {
 		help();
 		exit(0x00);
-	}*/
+	}
 
 	if (NULL == (all = getArg(argc, argv, "-a"))) {
 		all="n";
 	}
 	bool all_channel = (strcmp("y", all) == 0) ? true : false;
-	//channel_count = atoi(channels);
 	startSbus(device, all_channel);
 	return 0x00;
 }

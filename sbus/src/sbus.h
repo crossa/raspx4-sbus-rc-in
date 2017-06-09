@@ -26,14 +26,10 @@
 
 class Sbus {
 public:
-	uint8_t sbusData[25];
-	int16_t channels[18];
+
 	int16_t *channels_data;
 	int max_channels_count;
-	int16_t servos[18];
 	uint8_t failsafe_status;
-	int sbus_passthrough;
-	int toChannels;
 	Sbus(char*,bool);
 	~Sbus();
 	void init();
@@ -49,23 +45,16 @@ public:
 	void UpdateChannels(void);
 	void FeedLine(void);
 private:
+	bool _debug = false;
+	uint8_t _sbusData[25]; // SBUS帧数据
+	int16_t _channels[18]; // 18个通道的数据
+	int16_t _servos[18];   //18个舵机的数据
 	bool _all_channel; //是否完整开启16通道
-	char _device[30]; //设备标识
+	char _device[50]; //设备标识
 	int _device_fd; //设备具柄
-	struct termios2 _device_opt; //通信属性
-	int _setDeviceParity(int fd, int databits, int stopbits, int parity); //设定通信参数
-	uint8_t _channels;
-	uint8_t byte_in_sbus;
-	uint8_t bit_in_sbus;
-	uint8_t ch;
-	uint8_t bit_in_channel;
-	uint8_t bit_in_servo;
+	//uint8_t _channels;
 	int _shmid;
-	int *_mem;
 	int _key;
-	int bufferIndex;
-	uint8_t inData;
-	int feedState;
 };
 
 #endif

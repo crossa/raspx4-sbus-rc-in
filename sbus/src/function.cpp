@@ -26,6 +26,7 @@ void help() {
 }
 //----------------------------------启动Sbus
 void startSbus(char *device,bool all){
-	Sbus *bus = new Sbus(device,all);
-	bus->begin();
+	Sbus sbus(device,all);
+	sbus.init();
+	sbus.begin();
 }

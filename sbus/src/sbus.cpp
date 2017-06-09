@@ -40,7 +40,7 @@ void Sbus::init() {
 		printf("无法映射共享内存区块\n");
 		exit(0x02);
 	}
-	this->channels_data = (int16_t*) p;
+	this->channels_data = (int*) p;
 
 	//开启设备
 	_device_fd = open(_device, O_RDWR);

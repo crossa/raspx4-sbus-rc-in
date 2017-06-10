@@ -22,4 +22,4 @@
 
 # 之前已经使用我编写的 ppmdecode程序的用户，请在切换到sbus驱动之前，先将飞行器的桨移除，通电后修改地面站的遥控器PWM相关参数，
 
-普通遥控器使用sbus encode，sbus解析出来的PWM值范围为344～1710，具体数值请用我提供的ppmdecode查看
+# 普通遥控器使用sbus encode，sbus解析出来的PWM值范围为344～1710，具体数值请用我提供的ppmdecode查看

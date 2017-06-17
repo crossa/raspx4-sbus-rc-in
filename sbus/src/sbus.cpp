@@ -134,28 +134,28 @@ uint8_t Sbus::Failsafe(void) {
 }
 //--------------------------------------------------------------------------//
 void Sbus::UpdateChannels(void) {
-
-	_channels[0] = ((_sbusData[1] | _sbusData[2] << 8) & 0x07FF);
-	_channels[1] = ((_sbusData[2] >> 3 | _sbusData[3] << 5) & 0x07FF);
-	_channels[2] = ((_sbusData[3] >> 6 | _sbusData[4] << 2 | _sbusData[5] << 10)
-			& 0x07FF);
-	_channels[3] = ((_sbusData[5] >> 1 | _sbusData[6] << 7) & 0x07FF);
-	_channels[4] = ((_sbusData[6] >> 4 | _sbusData[7] << 4) & 0x07FF);
-	_channels[5] = ((_sbusData[7] >> 7 | _sbusData[8] << 1 | _sbusData[9] << 9)
-			& 0x07FF);
-	_channels[6] = ((_sbusData[9] >> 2 | _sbusData[10] << 6) & 0x07FF);
-	_channels[7] = ((_sbusData[10] >> 5 | _sbusData[11] << 3) & 0x07FF); // & the other 8 + 2 channels if you need them
+	//(uint16_t)(value * SBUS_SCALE_FACTOR +.5f) + SBUS_SCALE_OFFSET;
+	_channels[0] = (uint16_t)(((_sbusData[1] | _sbusData[2] << 8) & 0x07FF)* SBUS_SCALE_FACTOR+.5f)+SBUS_SCALE_OFFSET;
+	_channels[1] = (uint16_t)(((_sbusData[2] >> 3 | _sbusData[3] << 5) & 0x07FF)* SBUS_SCALE_FACTOR+.5f)+SBUS_SCALE_OFFSET;
+	_channels[2] = (uint16_t)(((_sbusData[3] >> 6 | _sbusData[4] << 2 | _sbusData[5] << 10)
+			& 0x07FF)* SBUS_SCALE_FACTOR+.5f)+SBUS_SCALE_OFFSET;
+	_channels[3] = (uint16_t)(((_sbusData[5] >> 1 | _sbusData[6] << 7) & 0x07FF)* SBUS_SCALE_FACTOR+.5f)+SBUS_SCALE_OFFSET;
+	_channels[4] = (uint16_t)(((_sbusData[6] >> 4 | _sbusData[7] << 4) & 0x07FF)* SBUS_SCALE_FACTOR+.5f)+SBUS_SCALE_OFFSET;
+	_channels[5] = (uint16_t)(((_sbusData[7] >> 7 | _sbusData[8] << 1 | _sbusData[9] << 9)
+			& 0x07FF)* SBUS_SCALE_FACTOR+.5f)+SBUS_SCALE_OFFSET;
+	_channels[6] = (uint16_t)(((_sbusData[9] >> 2 | _sbusData[10] << 6) & 0x07FF)* SBUS_SCALE_FACTOR+.5f)+SBUS_SCALE_OFFSET;
+	_channels[7] = (uint16_t)(((_sbusData[10] >> 5 | _sbusData[11] << 3) & 0x07FF)* SBUS_SCALE_FACTOR+.5f)+SBUS_SCALE_OFFSET;// & the other 8 + 2 channels if you need them
 	if (this->_all_channel) {
-		_channels[8] = ((_sbusData[12] | _sbusData[13] << 8) & 0x07FF);
-		_channels[9] = ((_sbusData[13] >> 3 | _sbusData[14] << 5) & 0x07FF);
-		_channels[10] = ((_sbusData[14] >> 6 | _sbusData[15] << 2
-				| _sbusData[16] << 10) & 0x07FF);
-		_channels[11] = ((_sbusData[16] >> 1 | _sbusData[17] << 7) & 0x07FF);
-		_channels[12] = ((_sbusData[17] >> 4 | _sbusData[18] << 4) & 0x07FF);
-		_channels[13] = ((_sbusData[18] >> 7 | _sbusData[19] << 1
-				| _sbusData[20] << 9) & 0x07FF);
-		_channels[14] = ((_sbusData[20] >> 2 | _sbusData[21] << 6) & 0x07FF);
-		_channels[15] = ((_sbusData[21] >> 5 | _sbusData[22] << 3) & 0x07FF);
+		_channels[8] = (uint16_t)(((_sbusData[12] | _sbusData[13] << 8) & 0x07FF)* SBUS_SCALE_FACTOR+.5f)+SBUS_SCALE_OFFSET;;
+		_channels[9] = (uint16_t)(((_sbusData[13] >> 3 | _sbusData[14] << 5) & 0x07FF)* SBUS_SCALE_FACTOR+.5f)+SBUS_SCALE_OFFSET;;
+		_channels[10] = (uint16_t)(((_sbusData[14] >> 6 | _sbusData[15] << 2
+				| _sbusData[16] << 10) & 0x07FF)* SBUS_SCALE_FACTOR+.5f)+SBUS_SCALE_OFFSET;
+		_channels[11] = (uint16_t)(((_sbusData[16] >> 1 | _sbusData[17] << 7) & 0x07FF)* SBUS_SCALE_FACTOR+.5f)+SBUS_SCALE_OFFSET;
+		_channels[12] = (uint16_t)(((_sbusData[17] >> 4 | _sbusData[18] << 4) & 0x07FF)* SBUS_SCALE_FACTOR+.5f)+SBUS_SCALE_OFFSET;
+		_channels[13] =(uint16_t)(((_sbusData[18] >> 7 | _sbusData[19] << 1
+				| _sbusData[20] << 9) & 0x07FF)* SBUS_SCALE_FACTOR+.5f)+SBUS_SCALE_OFFSET;
+		_channels[14] = (uint16_t)(((_sbusData[20] >> 2 | _sbusData[21] << 6) & 0x07FF)* SBUS_SCALE_FACTOR+.5f)+SBUS_SCALE_OFFSET;
+		_channels[15] = (uint16_t)(((_sbusData[21] >> 5 | _sbusData[22] << 3) & 0x07FF)* SBUS_SCALE_FACTOR+.5f)+SBUS_SCALE_OFFSET;
 	}
 
 	fflush(stdout);

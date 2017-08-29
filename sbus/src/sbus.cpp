@@ -190,7 +190,7 @@ void Sbus::UpdateChannels(void) {
 		failsafe_status = SBUS_SIGNAL_FAILSAFE;
 	}
 
-	for(int start=0;start<sizeof(this->max_channels_count);++start){
+	for(int start=0;start<this->max_channels_count;++start){
 		*(this->channels_data+start) = (int) _channels[start];
 	}
 
